@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          tags: thorstenheck0/hetzner-infrastructure:new
+          tags: thorstenheck0/hetzner-infrastructure:latest
           # build on feature branches, push only on main branch
           push: true
 
