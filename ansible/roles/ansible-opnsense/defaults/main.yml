@@ -1,0 +1,14 @@
+---
+
+# remote path of the config
+config_path: /conf/config.xml
+config_path_packer: /home/hetzner/packer/opnsense/config.xml
+
+# local path for the config
+# local_config_path: /tmp/config-{{ inventory_hostname }}.xml
+
+packer_local_config_path: /home/hetzner/ansible/roles/ansible-opnsense/templates/config.xml
+local_config_path: /tmp/config-{{ inventory_hostname }}.xml
+
+packer: false
+reset: false

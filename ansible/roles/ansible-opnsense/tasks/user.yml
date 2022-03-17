@@ -1,0 +1,48 @@
+---
+
+- name: user
+  delegate_to: localhost
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: /opnsense/system/user[name/text()="{{ item.0.name }}"]/{{ item.1.key }}
+    value: "{{ item.1.value }}"
+    pretty_print: yes
+  with_subelements:
+    - "{{ opn_user | default([]) }}"
+    - settings
+  when: item.1.value is defined
+
+- name: b64 user fields
+  delegate_to: localhost
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: /opnsense/system/user[name/text()="{{ item.0.name }}"]/{{ item.1.key }}
+    value: "{{ item.1.b64_value | b64encode }}"
+    pretty_print: yes
+  with_subelements:
+    - "{{ opn_user | default([]) }}"
+    - settings
+  when: item.1.b64_value is defined
+
+- name: pw set
+  delegate_to: localhost
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: /opnsense/system/user[name/text()="{{ item.0.name }}"]/{{ item.1.key }}
+    value: "{{ item.1.password_value }}"
+    pretty_print: yes
+  with_subelements:
+    - "{{ opn_user | default([]) }}"
+    - settings
+  when: item.1.password_value is defined
+
+- name: user - nextid
+  delegate_to: localhost
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: "/opnsense/{{ item.key }}"
+    value: "{{ item.value }}"
+    pretty_print: yes
+  with_dict: "{{ opn_nextid }}"
+  when: opn_nextid is defined
+...

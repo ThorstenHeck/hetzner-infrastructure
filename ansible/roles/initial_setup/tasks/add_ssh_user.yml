@@ -1,0 +1,30 @@
+---
+- name: Ensure group "{{ lookup('env', 'OPNSENSE_USER') }}" exists
+  group:
+    name: "{{ lookup('env', 'OPNSENSE_USER') }}"
+    state: present
+
+- name: Add the user "{{ lookup('env', 'OPNSENSE_USER') }}"
+  user:
+    name: "{{ lookup('env', 'OPNSENSE_USER') }}"
+    password: "{{ lookup('env', 'OPNSENSE_USER_HASH') }}"
+    group: "{{ lookup('env', 'OPNSENSE_USER') }}"
+    groups: "adm,sudo"
+    shell: /bin/bash
+    append: yes
+
+- name: Ensure "/home/{{ lookup('env', 'OPNSENSE_USER') }}/.ssh/" exists
+  file:
+    path: "/home/{{ lookup('env', 'OPNSENSE_USER') }}/.ssh/"
+    state: directory
+    owner: "{{ lookup('env', 'OPNSENSE_USER') }}"
+    group: "{{ lookup('env', 'OPNSENSE_USER') }}"
+    mode: 0700
+
+- name: Add Public key "/home/{{ lookup('env', 'OPNSENSE_USER') }}/.ssh/authorized_keys"
+  copy:
+    content: "{{ lookup('env', 'OPNSENSE_SSH_PUB_RAW') }}"
+    dest: "/home/{{ lookup('env', 'OPNSENSE_USER') }}/.ssh/authorized_keys"
+    mode: 0600
+    owner: "{{ lookup('env', 'OPNSENSE_USER') }}"
+    group: "{{ lookup('env', 'OPNSENSE_USER') }}"

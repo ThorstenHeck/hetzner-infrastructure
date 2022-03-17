@@ -1,0 +1,6 @@
+---
+- name: Update/Upgrade all packages to the latest version
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+    upgrade: 'yes'

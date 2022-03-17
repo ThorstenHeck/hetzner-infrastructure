@@ -1,0 +1,335 @@
+---
+ansible_user: "{{ lookup('env', 'OPNSENSE_USER') }}"
+ansible_sudo_pass: "{{ lookup('env', 'OPNSENSE_USER_PASSWORD') }}"
+
+opn_ssh:
+  - name: admins
+    settings:
+      - key: enabled
+        value: enabled
+
+opn_user:
+  - name: root
+    settings:
+      - key: scope
+        value: system
+      - key: groupname
+        value: admins
+      - key: uid
+        value: 0
+      - key: password
+        password_value: "{{ lookup('env', 'OPNSENSE_ROOT_HASH') }}"
+  - name: "{{ lookup('env', 'OPNSENSE_USER') }}"
+    settings:
+      - key: descr
+        value: "{{ lookup('env', 'OPNSENSE_USER') }}"
+      - key: scope
+        value: user
+      - key: groupname
+        value: admins
+      - key: shell
+        value: "/bin/sh"
+      - key: uid
+        value: 2000
+      - key: authorizedkeys
+        value: "{{ lookup('env', 'OPNSENSE_SSH_PUB') }}"
+      - key: password
+        password_value: "{{ lookup('env', 'OPNSENSE_USER_HASH') }}"
+  - name: "{{ lookup('env', 'VPN_USER') }}"
+    settings:
+      - key: descr
+        value: "{{ lookup('env', 'VPN_USER') }}"
+      - key: scope
+        value: user
+      - key: shell
+        value: "/sbin/nologin"
+      - key: uid
+        value: 2001
+      - key: password
+        password_value: "{{ lookup('env', 'VPN_USER_HASH') }}"
+      - key: cert
+        value: "5da9c397c6dca"
+
+opn_general:
+  - system/hostname: "opnsense"
+  - system/domain: "{{ lookup('env', 'PROJECT') }}.local"
+  - system/webgui/protocol: "https"
+  - system/webgui/nohttpreferercheck: "1"
+  - system/sudo_allow_wheel: "1"
+  - system/sudo_allow_group: "admins"
+
+opn_nextid:
+  - system/nextgid: "2002"
+  - system/nextuid: "2002"
+
+opn_group:
+  - name: admins
+    settings:
+      - member: 2000
+
+opn_interfaces_specific:
+  - interface: wan
+    settings:
+      - key: if
+        value: vtnet0
+      - key: descr
+        value: WAN
+      - key: ipaddr
+        value: dhcp
+  - interface: opt1
+    settings:
+      - key: if
+        value: vtnet1
+      - key: descr
+        value: LAN
+      - key: ipaddr
+        value: dhcp
+  - interface: openvpn
+    settings:
+      - key: if
+        value: openvpn
+      - key: internal_dynamic
+        value: 1
+      - key: descr
+        value: OpenVPN
+      - key: type
+        value: group
+      - key: virtual
+        value: 1
+
+opn_interfaces_all:
+  - key: 'enable'
+    value: "1"
+    interfaces: ['wan', 'opt1', 'openvpn']
+
+opn_filter:
+  - descr: Allow wan 443
+    settings:
+      - key: type
+        value: pass
+      - key: interface
+        value: wan
+      - key: ipprotocol
+        value: inet
+      - key: statetype
+        value: keep state
+      - key: direction
+        value: in
+      - key: protocol
+        value: tcp  
+      - key: source/any
+        value: any
+      - key: destination/any
+        value: 1
+      - key: destination/port
+        value: 443
+  - descr: Allow wan SSH
+    settings:
+      - key: type
+        value: pass
+      - key: interface
+        value: wan
+      - key: ipprotocol
+        value: inet
+      - key: statetype
+        value: keep state
+      - key: direction
+        value: in
+      - key: protocol
+        value: tcp/udp 
+      - key: source/any
+        value: any
+      - key: destination/any
+        value: 1
+      - key: destination/port
+        value: 22
+  - descr: Allow wan VPN Traffic
+    settings:
+      - key: type
+        value: pass
+      - key: interface
+        value: wan
+      - key: ipprotocol
+        value: inet
+      - key: statetype
+        value: keep state
+      - key: direction
+        value: in
+      - key: protocol
+        value: udp 
+      - key: source/any
+        value: 1
+      - key: destination/any
+        value: 1
+      - key: destination/port
+        value: 1194
+  - descr: Allow OpenVPN Traffic
+    settings:
+      - key: type
+        value: pass
+      - key: interface
+        value: openvpn
+      - key: ipprotocol
+        value: inet
+      - key: statetype
+        value: keep state
+      - key: direction
+        value: in
+      - key: quick
+        value: in
+      - key: source/address
+        value: "10.100.0.0/24"
+      - key: destination/any
+        value: 1
+
+opn_cas:
+  - refid: 5da98cfba4d6b
+    settings:
+      - key: descr
+        value: VPNCA
+      - key: crt
+        value: "{{ lookup('env', 'VPN_CA') }}"
+      - key: prv
+        value: "{{ lookup('env', 'VPN_CA_KEY') }}"
+      - key: serial
+        value: "1"
+
+opn_certs:
+  - refid: 5da9c397c6dcd
+    settings:
+      - key: caref
+        value: 5da98cfba4d6b
+      - key: descr
+        value: VPN Server
+      - key: crt
+        value: "{{ lookup('env', 'VPN_SERVER') }}"
+      - key: prv
+        value: "{{ lookup('env', 'VPN_SERVER_KEY') }}"
+  - refid: 5da9c397c6dca
+    settings:
+      - key: caref
+        value: 5da98cfba4d6b
+      - key: descr
+        value: VPN Client
+      - key: crt
+        value: "{{ lookup('env', 'VPN_CLIENT') }}"
+      - key: prv
+        value: "{{ lookup('env', 'VPN_CLIENT_KEY') }}"
+
+opn_openvpn_servers:
+  - vpnid: 1
+    settings:
+      # General
+      - key: description
+        value: OPNSense VPN Server
+      - key: mode
+        value: server_tls_user
+      - key: verbosity_level
+        value: "1"
+      # Networking
+      - key: interface
+        value: wan
+      - key: protocol
+        value: UDP
+      - key: dev_mode
+        value: tun
+      - key: local_port
+        value: 1194
+      - key: tunnel_network
+        value: 10.100.0.0/24
+      - key: local_network
+        value: "{{ lookup('env', 'IP_RANGE') }}"
+      - key: netbios_ntype
+        value: "0"
+      - key: no_tun_ipv6
+        value: "yes"
+      - key: tls_mode
+        value: auth
+      - key: dynamic_ip
+        value: "yes"
+      - key: topology_subnet
+        value: "yes"
+      # Authentication
+      - key: authmode
+        value: "Local Database"
+      - key: reneg-sec
+        value: "0"
+      # Cryptography
+      - key: crypto
+        value: AES-256-CBC
+      - key: digest
+        value: SHA512
+      - key: pool_enable
+        value: "yes"
+      - key: tls
+        value: "{{ lookup('env', 'VPN_STATIC_KEY') }}"
+      - key: caref
+        value: 5da98cfba4d6b
+      - key: certref
+        value: 5da9c397c6dcd
+      - key: dh_length
+        value: 4096
+      - key: cert_depth
+        value: 1
+
+
+
+
+dnsserver:
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+opn_unset:
+  - system/ipv6allow
+  - trigger_initial_wizard
+
+opn_gateways:
+  - interface: lan
+    settings:
+      - key: gateway
+        value: 172.16.1.2
+      - key: name
+        value: internal_route
+      - key: weight
+        value: 1
+      - key: ipprotocol
+        value: inet
+
+opn_staticroutes:
+  - descr: '10.0.0.0/8'
+    uuid: 20a9db7a-ce9b-4e87-bb0d-d0c225b43519
+    settings:
+      - key: network
+        value: '10.0.0.0/8'
+      - key: gateway
+        value: internal_route
+      - key: disabled
+        value: 0
+  - descr: '172.16.0.0/16'
+    uuid: 953277c1-2cf8-4671-ac1b-d175cf80ea4f
+    settings:
+      - key: network
+        value: '172.16.0.0/16'
+      - key: gateway
+        value: internal_route
+      - key: disabled
+        value: 0
+        
+opn_nat_settings:
+  - nat/outbound/mode: "advanced"
+  
+opn_nat:
+  - descr: outbound NAT
+    settings:
+      - key: interface
+        value: wan
+      - key: targetip_subnet
+        value: 0
+      - key: ipprotocol
+        value: inet
+      - key: source/network
+        value: any
+      - key: destination/any
+        value: 1
+      - key: log
+        value: 1

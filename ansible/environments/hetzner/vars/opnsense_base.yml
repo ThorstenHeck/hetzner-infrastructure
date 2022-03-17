@@ -1,0 +1,109 @@
+---
+ansible_user: ansible
+ansible_ssh_pass: "{{ lookup('env', 'ANSIBLE_OPNSENSE_PW') }}"
+
+opn_ssh:
+  - name: admins
+    settings:
+      - key: enabled
+        value: enabled
+
+opn_user:
+  - name: root
+    settings:
+      - key: scope
+        value: system
+      - key: groupname
+        value: admins
+      - key: uid
+        value: 0
+      - key: password
+        password_value: "{{ lookup('env', 'ROOT_OPNSENSE_HASH') }}"
+  - name: ansible
+    settings:
+      - key: descr
+        value: "ansible"
+      - key: scope
+        value: user
+      - key: groupname
+        value: admins
+      - key: shell
+        value: "/bin/sh"
+      - key: uid
+        value: 2000
+      - key: authorizedkeys
+        value: "{{ lookup('env', 'ANSIBLE_SSH_PUB') }}"
+      - key: password
+        password_value: "{{ lookup('env', 'ANSIBLE_OPNSENSE_HASH') }}"
+
+opn_general:
+  - system/webgui/protocol: "https"
+  - system/webgui/nohttpreferercheck: "1"
+  - system/sudo_allow_wheel: "1"
+  - system/sudo_allow_group: "admins"
+
+opn_nextid:
+  - system/nextgid: "2001"
+  - system/nextuid: "2001"
+
+opn_group:
+  - name: admins
+    settings:
+      - member: 2000
+
+opn_interfaces_specific:
+  - interface: wan
+    settings:
+      - key: if
+        value: vtnet0
+      - key: descr
+        value: WAN
+      - key: ipaddr
+        value: dhcp
+        
+opn_interfaces_all:
+  - key: 'enable'
+    value: "1"
+    interfaces: ['wan']
+
+opn_filter:
+  - descr: Allow wan 443
+    settings:
+      - key: type
+        value: pass
+      - key: interface
+        value: wan
+      - key: ipprotocol
+        value: inet
+      - key: statetype
+        value: keep state
+      - key: direction
+        value: in
+      - key: protocol
+        value: tcp  
+      - key: source/any
+        value: any
+      - key: destination/any
+        value: 1
+      - key: destination/port
+        value: 443
+  - descr: Allow wan SSH
+    settings:
+      - key: type
+        value: pass
+      - key: interface
+        value: wan
+      - key: ipprotocol
+        value: inet
+      - key: statetype
+        value: keep state
+      - key: direction
+        value: in
+      - key: protocol
+        value: tcp/udp 
+      - key: source/any
+        value: any
+      - key: destination/any
+        value: 1
+      - key: destination/port
+        value: 22

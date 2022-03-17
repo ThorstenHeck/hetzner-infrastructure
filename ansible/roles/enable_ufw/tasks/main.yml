@@ -1,0 +1,5 @@
+---
+- name: start and enable ufw-service. Defaul ploicy - deny
+  ufw:
+    state: enabled
+    default: deny

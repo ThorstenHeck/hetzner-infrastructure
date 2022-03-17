@@ -1,0 +1,9 @@
+---
+- name: reload ufw
+  ufw:
+    state: reloaded
+
+- name: restart sshd
+  systemd:
+    name: sshd
+    state: restarted

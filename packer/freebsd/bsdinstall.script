@@ -1,0 +1,25 @@
+DISTRIBUTIONS="kernel.txz base.txz"
+export ZFSBOOT_DISKS=da0
+export ZFSBOOT_VDEV_TYPE=stripe
+export nonInteractive=YES
+BSDINSTALL_DISTSITE=http://ftp.freebsd.org/pub/FreeBSD/releases/amd64/13.0-RELEASE
+BSDINSTALL_DISTDIR=/var/cache/pkg
+
+mkdir -p $BSDINSTALL_DISTDIR
+cd $BSDINSTALL_DISTDIR
+for dist in $DISTRIBUTIONS ; do
+    ftp $BSDINSTALL_DISTSITE/$dist
+done
+cd -
+
+export SSHKEY="$(cat /root/.ssh/authorized_keys)"
+
+#!/bin/sh
+sysrc ifconfig_vtnet0=DHCP
+sysrc sshd_enable=YES
+
+mkdir -p /root/.ssh/
+echo "$SSHKEY" > /root/.ssh/authorized_keys
+sed -i '' 's/.*PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+
+echo 'beastie_disable="YES"' >> /boot/loader.conf

@@ -1,0 +1,12 @@
+---
+- name: ssh
+  delegate_to: localhost
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: /opnsense/system/ssh[group/text()="{{ item.0.name }}"]/{{ item.1.key }}
+    value: "{{ item.1.value }}"
+    pretty_print: yes
+  with_subelements:
+    - "{{ opn_ssh | default([]) }}"
+    - settings
+  when: item.1.value is defined

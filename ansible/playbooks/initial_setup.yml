@@ -1,0 +1,29 @@
+---
+- name: initial setup with hardening
+  hosts:
+    - default
+  become: yes
+
+  vars:
+    ansible_user: root
+
+  collections:
+    - devsec.hardening
+
+  roles:
+    - role: initial_setup
+
+    - role: devsec.hardening.os_hardening
+      vars:
+        os_auth_pw_max_age: 9999
+        os_selinux_state: permissive
+        os_selinux_policy: default
+
+    - role: devsec.hardening.ssh_hardening
+      vars:
+        sftp_enabled: true
+        ssh_print_motd: false
+        ssh_print_pam_motd: true
+        ssh_selinux_packages:
+          - policycoreutils-python-utils
+          - checkpolicy

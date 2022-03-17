@@ -1,0 +1,54 @@
+---
+- name: update packages
+  tags: [update]
+  block:
+    - include_tasks: ../roles/initial_setup/tasks/update.yml
+
+- name: Set timezone to UTC
+  timezone:
+    name: UTC
+
+- name: add user
+  tags: [add_user]
+  block:
+    - include_tasks: ../roles/initial_setup/tasks/add_ssh_user.yml
+
+- name: install base packages
+  apt:
+    name: "{{ base_packages }}"
+    state: latest
+    update_cache: false
+
+- name: Set logging for ufw
+  ufw:
+    logging: 'on'
+
+- name: "ufw rule: reset All Rules"
+  ufw:
+    state: reset
+  notify: reload ufw
+
+- name: Allow SSH access from opnsense to ens10
+  ufw:
+    port: ssh
+    rule: limit
+    interface: ens10
+    direction: in
+    src: '{{ item }}'
+  with_items:
+    - "{{ lookup('env', 'OPNSENSE_LOCAL_IP') }}"
+  notify: reload ufw
+
+- name: start and enable ufw-service. Defaul ploicy - deny
+  ufw:
+    state: enabled
+    default: deny
+
+- name: Change the password for root
+  user:
+    name: root
+    password: "{{ lookup('env', 'ROOT_PASSWORD') }}"
+    group: root
+    groups: root
+    shell: /bin/bash
+    append: yes

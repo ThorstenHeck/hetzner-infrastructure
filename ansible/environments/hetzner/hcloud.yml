@@ -1,0 +1,10 @@
+---
+plugin: hcloud
+
+network: NETWORK_NAME
+connect_with: private_ipv4
+token_env: "HCLOUD_TOKEN"
+keyed_groups:
+  - key: labels
+    separator: ""
+    prefix: ""

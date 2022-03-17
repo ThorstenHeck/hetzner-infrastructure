@@ -1,0 +1,188 @@
+---
+#- name: Download OPNsense XML sample config
+#  get_url:
+#    url: https://raw.githubusercontent.com/opnsense/core/master/src/etc/config.xml.sample
+#    dest: /tmp/config.xml
+
+- name: fetch
+  include: fetch.yml
+  tags: fetch
+  vars:
+    ansible_python_interpreter: "/usr/local/bin/python3"
+
+- name: fetch - packer
+  include: fetch_packer.yml
+  tags: fetch_packer
+
+- name: ssh
+  include: ssh.yml
+  tags: ssh
+
+- name: dnsserver
+  include: dnsserver.yml
+  tags: dnsserver
+
+- name: user
+  include: user.yml
+  tags: user
+  no_log: true
+
+- name: group
+  include: group.yml
+  tags: group
+
+- name: general
+  include: general.yml
+  tags: general
+
+#- name: sysctl
+#  include: sysctl.yml
+#  tags: sysctl
+
+- name: authservers
+  include: authservers.yml
+  tags: authservers
+
+- name: CAs
+  include: ca.yml
+  tags: ca
+  no_log: true
+
+- name: VPN
+  include: vpn.yml
+  tags: vpn
+  no_log: true
+
+- name: IPSec
+  include: ipsec.yml
+  tags:
+    - vpn
+    - ipsec
+
+- name: interfaces
+  include: interfaces.yml
+  tags: interfaces
+
+- name: vlans
+  include: vlans.yml
+  tags: vlans
+  when: opn_interfaces_vlan_parent_interface is defined
+
+- name: bridges
+  include: bridges.yml
+  tags: bridges
+  
+- name: virtualip
+  include: virtualip.yml
+  tags: virtualip
+
+- name: alias
+  include: alias.yml
+  tags: alias
+
+- name: filter
+  include: filter.yml
+  tags: filter
+  
+- name: gateways
+  include: gateways.yml
+  #when: prod | default([])
+  tags: gateways 
+
+- name: hasync
+  include: hasync.yml
+  tags: hasync
+
+- name: dhcpd
+  include: dhcpd.yml
+  tags: dhcpd
+
+- name: unbound
+  include: unbound.yml
+  tags: unbound
+
+- name: syslog
+  include: syslog.yml
+  tags: syslog
+
+- name: staticroutes
+  include: staticroutes.yml
+  tags: staticroutes
+
+- name: nat
+  include: nat.yml
+  tags: nat
+
+- name: laggs
+  include: laggs.yml
+  tags: laggs
+
+- name: trim EOF
+  delegate_to: localhost
+  lineinfile:
+    state: absent
+    insertafter: EOF
+    line: ""
+    path: "{{ local_config_path }}"
+  changed_when: false
+  tags: trim
+
+- name: fix xml start tag
+  delegate_to: localhost
+  lineinfile:
+    line: '<?xml version="1.0"?>'
+    regexp: '^<\?xml.*>'
+    insertbefore: BOF
+    path: "{{ local_config_path }}"
+  changed_when: false
+  tags: trim
+
+- name: copy
+  become: true
+  copy:
+    src: "{{ local_config_path }}"
+    dest: "{{ config_path }}"
+    backup: yes
+  register: config
+  tags: copy
+  vars:
+    ansible_python_interpreter: "/usr/local/bin/python3"
+
+
+- name: copy to packer
+  copy:
+    src: "{{ local_config_path }}"
+    dest: "{{ config_path_packer }}"
+    backup: yes
+  register: config
+  tags: copy_packer
+
+- name: clean,safe delete
+  delegate_to: localhost
+  shell: srm "{{ local_config_path }}"
+  tags: clean
+
+- name: reload
+  command: "{{ item }}"
+  with_items:
+    # - configctl interface reconfigure wan
+    - configctl filter sync
+    - configctl service reload all
+    - configctl webgui restart
+  # when: config.changed
+  tags: reload
+  vars:
+    ansible_python_interpreter: "/usr/local/bin/python3"
+
+# dont wait for succesfull return, because ssh times out after Interface changes - triggered by service reload all. 
+- name: reload_no_wait
+  command: "{{ item }}"
+  with_items:
+    - configctl service reload all
+  tags: reload_no_wait
+  async: 10
+  poll: 0
+  vars:
+    ansible_python_interpreter: "/usr/local/bin/python3"
+
+...
